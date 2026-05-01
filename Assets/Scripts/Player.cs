@@ -4,6 +4,12 @@ using UnityEngine;
     This script provides jumping and movement in Unity 3D - Gatsby
 */
 
+public enum MovementMode
+{
+    Ground,
+    Flying
+}
+
 public class Player : MonoBehaviour
 {
     // Camera Rotation
@@ -11,11 +17,15 @@ public class Player : MonoBehaviour
     private float verticalRotation = 0f;
     private Transform cameraTransform;
     
-    // Ground Movement
+    // General Movement
     private Rigidbody rb;
     public float MoveSpeed = 5f;
     private float moveHorizontal;
     private float moveForward;
+    public MovementMode currentMovementMode = MovementMode.Ground;
+    public bool canFly = true;
+    public float flySpeed = 8f;
+    public float flyVerticalSpeed = 5f;
 
     // Jumping
     public float jumpForce = 10f;
@@ -32,6 +42,7 @@ public class Player : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
+        rb.useGravity = currentMovementMode == MovementMode.Ground;
         cameraTransform = Camera.main.transform;
 
         // Set the raycast to be slightly beneath the player's feet
@@ -50,37 +61,59 @@ public class Player : MonoBehaviour
 
         RotateCamera();
 
-        if (Input.GetButtonDown("Jump") && isGrounded)
+        if (canFly && Input.GetKeyDown(KeyCode.F))
+        {
+            currentMovementMode = currentMovementMode == MovementMode.Flying
+                ? MovementMode.Ground
+                : MovementMode.Flying;
+
+            rb.useGravity = currentMovementMode == MovementMode.Ground;
+            if (currentMovementMode == MovementMode.Flying)
+            {
+                isGrounded = false;
+                groundCheckTimer = 0f;
+            }
+        }
+
+        if (Input.GetButtonDown("Jump") && currentMovementMode == MovementMode.Ground && isGrounded)
         {
             Jump();
         }
 
-        // Checking when we're on the ground and keeping track of our ground check delay
-        if (!isGrounded && groundCheckTimer <= 0f)
+        if (currentMovementMode == MovementMode.Ground)
         {
-            Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
-            isGrounded = Physics.Raycast(rayOrigin, Vector3.down, raycastDistance, groundLayer);
+            // Checking when we're on the ground and keeping track of our ground check delay
+            if (!isGrounded && groundCheckTimer <= 0f)
+            {
+                Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
+                isGrounded = Physics.Raycast(rayOrigin, Vector3.down, raycastDistance, groundLayer);
+            }
+            else
+            {
+                groundCheckTimer -= Time.deltaTime;
+            }
         }
-        else
-        {
-            groundCheckTimer -= Time.deltaTime;
-        }
-
     }
 
     void FixedUpdate()
     {
-        MovePlayer();
-        ApplyJumpPhysics();
+        switch (currentMovementMode)
+        {
+            case MovementMode.Ground:
+                MoveGround();
+                ApplyJumpPhysics();
+                break;
+            case MovementMode.Flying:
+                MoveFlying();
+                break;
+        }
     }
 
-    void MovePlayer()
+    void MoveGround()
     {
-
         Vector3 movement = (transform.right * moveHorizontal + transform.forward * moveForward).normalized;
         Vector3 targetVelocity = movement * MoveSpeed;
 
-        // Apply movement to the Rigidbody
         Vector3 velocity = rb.linearVelocity;
         velocity.x = targetVelocity.x;
         velocity.z = targetVelocity.z;
@@ -91,6 +124,17 @@ public class Player : MonoBehaviour
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         }
+    }
+
+    void MoveFlying()
+    {
+        float ascend = Input.GetButton("Jump") ? flyVerticalSpeed : 0f;
+        float descend = Input.GetKey(KeyCode.LeftControl) ? -flyVerticalSpeed : 0f;
+
+        Vector3 horizontalVelocity = (transform.right * moveHorizontal + transform.forward * moveForward).normalized * flySpeed;
+        Vector3 verticalVelocity = Vector3.up * (ascend + descend);
+
+        rb.linearVelocity = horizontalVelocity + verticalVelocity;
     }
 
     void RotateCamera()

@@ -13,9 +13,14 @@ public enum MovementMode
 public class Player : MonoBehaviour
 {
     // Camera Rotation
-    public float mouseSensitivity = 2f;
-    private float verticalRotation = 0f;
+    public float mouseSensitivity = 4f;
+    private float verticalRotation = 20f;   // start angle (degrees down toward player)
+    private float horizontalRotation = 0f;
     private Transform cameraTransform;
+
+    public float cameraDistance = 0f;       // how far behind the player
+    public float cameraHeight = -12f;         // target height offset on the player
+    public Vector2 verticalClamp = new Vector2(-10f, 60f); // min/max look angle
     
     // General Movement
     private Rigidbody rb;
@@ -43,8 +48,7 @@ public class Player : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         rb.useGravity = currentMovementMode == MovementMode.Ground;
-        cameraTransform = Camera.main.transform;
-
+        cameraTransform = GameObject.FindWithTag("MainCamera").transform;
         // Set the raycast to be slightly beneath the player's feet
         playerHeight = GetComponent<CapsuleCollider>().height * transform.localScale.y;
         raycastDistance = (playerHeight / 2) + 0.2f;
@@ -111,15 +115,22 @@ public class Player : MonoBehaviour
 
     void MoveGround()
     {
-        Vector3 movement = (transform.right * moveHorizontal + transform.forward * moveForward).normalized;
-        Vector3 targetVelocity = movement * MoveSpeed;
+        Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
+        Vector3 camRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
+        Vector3 movement = (camRight * moveHorizontal + camForward * moveForward).normalized;
 
         Vector3 velocity = rb.linearVelocity;
-        velocity.x = targetVelocity.x;
-        velocity.z = targetVelocity.z;
+        velocity.x = movement.x * MoveSpeed;
+        velocity.z = movement.z * MoveSpeed;
         rb.linearVelocity = velocity;
 
-        // If we aren't moving and are on the ground, stop velocity so we don't slide
+        // Rotate player to face movement direction
+        if (movement.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(movement);
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, Time.fixedDeltaTime * 10f));
+        }
+
         if (isGrounded && moveHorizontal == 0 && moveForward == 0)
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
@@ -128,24 +139,30 @@ public class Player : MonoBehaviour
 
     void MoveFlying()
     {
+        Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
+        Vector3 camRight = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
+        Vector3 horizontalVelocity = (camRight * moveHorizontal + camForward * moveForward).normalized * flySpeed;
+
         float ascend = Input.GetButton("Jump") ? flyVerticalSpeed : 0f;
         float descend = Input.GetKey(KeyCode.LeftControl) ? -flyVerticalSpeed : 0f;
 
-        Vector3 horizontalVelocity = (transform.right * moveHorizontal + transform.forward * moveForward).normalized * flySpeed;
-        Vector3 verticalVelocity = Vector3.up * (ascend + descend);
-
-        rb.linearVelocity = horizontalVelocity + verticalVelocity;
+        rb.linearVelocity = horizontalVelocity + Vector3.up * (ascend + descend);
     }
 
     void RotateCamera()
     {
-        float horizontalRotation = Input.GetAxis("Mouse X") * mouseSensitivity;
-        transform.Rotate(0, horizontalRotation, 0);
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        verticalRotation -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-        verticalRotation = Mathf.Clamp(verticalRotation, -90f, 90f);
+        horizontalRotation += mouseX;
+        verticalRotation -= mouseY;
+        verticalRotation = Mathf.Clamp(verticalRotation, verticalClamp.x, verticalClamp.y);
 
-        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
+        // Position camera behind and above player
+        Quaternion camRotation = Quaternion.Euler(verticalRotation, horizontalRotation, 0f);
+        Vector3 targetPos = transform.position + Vector3.up * cameraHeight;
+        cameraTransform.position = targetPos + camRotation * new Vector3(0f, 0f, -cameraDistance);
+        cameraTransform.LookAt(targetPos);
     }
 
     void Jump()

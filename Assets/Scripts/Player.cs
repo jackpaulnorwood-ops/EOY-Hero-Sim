@@ -12,14 +12,17 @@ public enum MovementMode
 
 public class Player : MonoBehaviour
 {
+
+public Animator PlayerAnimator;
+
     // Camera Rotation
     public float mouseSensitivity = 4f;
     private float verticalRotation = 20f;   // start angle (degrees down toward player)
     private float horizontalRotation = 0f;
     private Transform cameraTransform;
 
-    public float cameraDistance = 0f;       // how far behind the player
-    public float cameraHeight = -12f;         // target height offset on the player
+    public float cameraDistance = 5f;       // how far behind the player
+    public float cameraHeight = 2f;         // target height offset on the player
     public Vector2 verticalClamp = new Vector2(-10f, 60f); // min/max look angle
     
     // General Movement
@@ -129,6 +132,12 @@ public class Player : MonoBehaviour
         {
             Quaternion targetRotation = Quaternion.LookRotation(movement);
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, Time.fixedDeltaTime * 10f));
+
+            PlayerAnimator.SetBool("WalkForward", true);
+        }
+        else
+        {
+            PlayerAnimator.SetBool("Idle", true);
         }
 
         if (isGrounded && moveHorizontal == 0 && moveForward == 0)
@@ -147,6 +156,20 @@ public class Player : MonoBehaviour
         float descend = Input.GetKey(KeyCode.LeftControl) ? -flyVerticalSpeed : 0f;
 
         rb.linearVelocity = horizontalVelocity + Vector3.up * (ascend + descend);
+
+        if (horizontalVelocity.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(horizontalVelocity);
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, Time.fixedDeltaTime * 10f));
+        }
+
+        if (isGrounded && moveHorizontal == 0 && moveForward == 0)
+        {
+            rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+        }
+
+        PlayerAnimator.SetBool("Fly", true);
+        
     }
 
     void RotateCamera()

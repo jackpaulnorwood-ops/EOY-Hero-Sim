@@ -13,7 +13,7 @@ public enum MovementMode
 public class Player : MonoBehaviour
 {
 
-public Animator PlayerAnimator;
+public Animator anim;
 
     // Camera Rotation
     public float mouseSensitivity = 4f;
@@ -48,6 +48,7 @@ public Animator PlayerAnimator;
 
     void Start()
     {
+        anim = GetComponent<Animator>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
         rb.useGravity = currentMovementMode == MovementMode.Ground;
@@ -133,11 +134,11 @@ public Animator PlayerAnimator;
             Quaternion targetRotation = Quaternion.LookRotation(movement);
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, Time.fixedDeltaTime * 10f));
 
-            PlayerAnimator.SetBool("WalkForward", true);
+            anim.SetTrigger("Walk");
         }
         else
         {
-            PlayerAnimator.SetBool("Idle", true);
+            anim.SetTrigger("Idle");
         }
 
         if (isGrounded && moveHorizontal == 0 && moveForward == 0)
@@ -168,7 +169,7 @@ public Animator PlayerAnimator;
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         }
 
-        PlayerAnimator.SetBool("Fly", true);
+        anim.SetTrigger("Fly");
         
     }
 

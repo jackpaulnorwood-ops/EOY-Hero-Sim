@@ -191,6 +191,7 @@ public Animator anim;
 
     void Jump()
     {
+        anim.SetTrigger("Jump");
         isGrounded = false;
         groundCheckTimer = groundCheckDelay;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z); // Initial burst for the jump

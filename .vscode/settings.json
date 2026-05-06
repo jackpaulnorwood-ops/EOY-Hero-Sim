@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "EOY-Hero-Sim.slnx",
+    "dotnet.defaultSolution": "Superhero Sim.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }

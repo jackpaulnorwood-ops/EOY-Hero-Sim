@@ -694,7 +694,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e60109c82389a3645867c548b588a14f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Player
-  PlayerAnimator: {fileID: 0}
+  anim: {fileID: 0}
   mouseSensitivity: 2
   cameraDistance: 4
   cameraHeight: 0.5

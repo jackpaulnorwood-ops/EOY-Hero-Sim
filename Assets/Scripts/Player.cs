@@ -68,6 +68,7 @@ public Animator anim;
         moveForward = Input.GetAxisRaw("Vertical");
 
         RotateCamera();
+        UpdateAnimations(); // <-- Drive all animation state here
 
         if (canFly && Input.GetKeyDown(KeyCode.F))
         {
@@ -117,6 +118,31 @@ public Animator anim;
         }
     }
 
+    // ─────────────────────────────────────────────
+    //  ANIMATIONS
+    // ─────────────────────────────────────────────
+    // Animator parameters expected:
+    //   bool  "isWalking"
+    //   bool  "isFlying"
+    //   trigger "Jump"      (set once when jump starts)
+    //
+    // Recommended Animator setup:
+    //   Idle  ──(isWalking)──►  Walk
+    //   Idle  ──(isFlying) ──►  Fly
+    //   Walk  ──(!isWalking)──► Idle
+    //   Any   ──[Jump trigger]► Jump  (transitions back to Idle/Walk on exit)
+
+    void UpdateAnimations()
+    {
+        bool isMoving = (moveHorizontal != 0 || moveForward != 0);
+        bool isFlying = currentMovementMode == MovementMode.Flying;
+
+        anim.SetBool("isWalking", isMoving && !isFlying);
+        anim.SetBool("isFlying",  isFlying);
+    }
+
+    // ─────────────────────────────────────────────
+
     void MoveGround()
     {
         Vector3 camForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
@@ -133,12 +159,6 @@ public Animator anim;
         {
             Quaternion targetRotation = Quaternion.LookRotation(movement);
             rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, Time.fixedDeltaTime * 10f));
-
-            anim.SetTrigger("Walk");
-        }
-        else
-        {
-            anim.SetTrigger("Idle");
         }
 
         if (isGrounded && moveHorizontal == 0 && moveForward == 0)
@@ -168,9 +188,6 @@ public Animator anim;
         {
             rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         }
-
-        anim.SetTrigger("Fly");
-        
     }
 
     void RotateCamera()
@@ -191,10 +208,11 @@ public Animator anim;
 
     void Jump()
     {
-        anim.SetTrigger("Jump");
         isGrounded = false;
         groundCheckTimer = groundCheckDelay;
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z); // Initial burst for the jump
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+
+        anim.SetTrigger("Jump"); // <-- Fire jump animation exactly once
     }
 
     void ApplyJumpPhysics()

@@ -13,7 +13,8 @@ public enum MovementMode
 public class Player : MonoBehaviour
 {
 
-public Animator anim;
+    public Animator anim;
+    public GameObject playerMesh;
 
     // Camera Rotation
     public float mouseSensitivity = 4f;
@@ -77,10 +78,18 @@ public Animator anim;
                 : MovementMode.Flying;
 
             rb.useGravity = currentMovementMode == MovementMode.Ground;
+            CapsuleCollider col = GetComponent<CapsuleCollider>();
             if (currentMovementMode == MovementMode.Flying)
             {
                 isGrounded = false;
                 groundCheckTimer = 0f;
+                col.direction = 2;
+                playerMesh.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+            else
+            {
+                col.direction = 1;
+                playerMesh.transform.localRotation = Quaternion.identity;
             }
         }
 
